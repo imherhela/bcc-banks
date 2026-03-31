@@ -231,11 +231,18 @@ BccUtils.RPC:Register('Feather:Banks:GetAccount', function(params, cb, src)
     end
 
     if IsAccountLocked(accId, src) and not IsActiveUser(accId, src) then
-        devPrint("GetAccount: Account locked and not active user. accId=", accId)
-        NotifyClient(src, _U('error_account_locked'), "error", 4000)
-        NotifyClient(src, _U('error_account_locked'), 'error', 4000)
-        cb(false)
-        return
+        -- Auto-clear the lock if the holder is no longer connected
+        local lockHolder = GetAccountLockHolder(accId)
+        if lockHolder and GetPlayerName(lockHolder) == nil then
+            devPrint("GetAccount: Lock holder src=", lockHolder, "is gone, auto-clearing lock for accId=", accId)
+            SetLockedAccount(accId, lockHolder, false)
+        else
+            devPrint("GetAccount: Account locked and not active user. accId=", accId)
+            NotifyClient(src, _U('error_account_locked'), "error", 4000)
+            NotifyClient(src, _U('error_account_locked'), 'error', 4000)
+            cb(false)
+            return
+        end
     end
 
     if lockAccount then
@@ -322,7 +329,6 @@ BccUtils.RPC:Register('Feather:Banks:GetAccountAccessList', function(params, cb,
     cb(true, { access = accessList })
 end)
 
-
 BccUtils.RPC:Register('Feather:Banks:GiveAccountAccess', function(params, cb, src)
     devPrint("GiveAccountAccess RPC called. src=", src, "params=", params)
 
@@ -334,25 +340,29 @@ BccUtils.RPC:Register('Feather:Banks:GiveAccountAccess', function(params, cb, sr
         return
     end
     local requesterId = user.getUsedCharacter.charIdentifier
-    local account = NormalizeId(params and params.account)
-    -- Expect VORP character identifier (charidentifier) from client
-    local otherCharacter = tonumber(params and params.character)
-    if not otherCharacter then
-        devPrint("GiveAccountAccess: invalid target character id")
-        NotifyClient(src, _U('error_invalid_data_provided'), 'error', 4000)
-        cb(false)
-        return
-    end
-    local level = tonumber(params and params.level)
+    local account    = NormalizeId(params and params.account)
+    local firstName  = tostring((params and params.first_name) or ''):match('^%s*(.-)%s*$')
+    local lastName   = tostring((params and params.last_name)  or ''):match('^%s*(.-)%s*$')
+    local level      = tonumber(params and params.level)
 
-    devPrint("Parsed inputs → account:", account, "targetCharacter:", otherCharacter, "level:", level, "requesterId:", requesterId)
+    devPrint("GiveAccountAccess: account:", account, "name:", firstName, lastName, "level:", level, "requesterId:", requesterId)
 
-    if not requesterId or not account or not otherCharacter or not level then
+    if not requesterId or not account or firstName == '' or lastName == '' or not level then
         devPrint("GiveAccountAccess: Invalid input data.")
         NotifyClient(src, _U('error_invalid_data_provided'), "error", 4000)
         cb(false)
         return
     end
+
+    -- Resolve name to character ID
+    local otherCharacter = GetCharacterByName(firstName, lastName)
+    if not otherCharacter then
+        devPrint("GiveAccountAccess: character not found for name:", firstName, lastName)
+        NotifyClient(src, _U('error_target_character_not_found'), 'error', 4000)
+        cb(false)
+        return
+    end
+    otherCharacter = tonumber(otherCharacter)
 
     -- Permission check
     if not (IsAccountAdmin(account, requesterId) or IsAccountOwner(account, requesterId)) then
@@ -807,4 +817,11 @@ BccUtils.RPC:Register('Feather:Banks:TransferCash', function(params, cb, src)
     devPrint("Transfer completed. from:", fromAcc.id, "to:", toAcc.id, "amount:", amount, "fee:", fee)
     NotifyClient(src, _U('success_transfer', tostring(amount)), 'success', 4000)
     cb(true, { fee = fee, debited = totalDebit })
+end)
+
+RegisterNetEvent("Feather:Banks:MenuClosed", function()
+    local src = source
+    devPrint("MenuClosed: clearing account locks for src=", src)
+    ClearAccountLocks(src)
+    ClearBankerBusy(src)
 end)
