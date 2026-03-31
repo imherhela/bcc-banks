@@ -52,11 +52,19 @@ BccUtils.RPC:Register('Feather:Banks:CreateBank', function(params, res, src)
 end)
 
 BccUtils.RPC:Register('Feather:Banks:GetBankerBusy', function(params, res, src)
+    if not Config.UseBankerBusy then
+        res(false)
+        return
+    end
     local bank = params.bank
     res(IsBankerBusy(bank, src))
 end)
 
 BccUtils.RPC:Register('Feather:Banks:SetBankerBusy', function(params, res, src)
+    if not Config.UseBankerBusy then
+        if res then res(true) end
+        return
+    end
     local bank = params.bank
     local state = params.state
 
@@ -65,4 +73,5 @@ BccUtils.RPC:Register('Feather:Banks:SetBankerBusy', function(params, res, src)
     else
         ClearBankerBusy(src)
     end
+    if res then res(true) end
 end)
