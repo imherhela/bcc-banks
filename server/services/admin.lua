@@ -1,18 +1,107 @@
 -- Admin/Banker server commands for managing bank loan rates and inspecting data
 
-local function getMailboxApi()
-    local helper = BccBanksInternal and BccBanksInternal.getMailboxApi
-    if helper then
-        return helper()
+-- Unified mail sender — dispatches to whichever script is set in Config.Mail.Script
+local function sendMailToCharacter(charId, fromName, subject, body)
+    if not charId or not subject or not body then return end
+
+    local mailCfg = Config.Mail or {}
+    local script  = tostring(mailCfg.Script or 'bcc-mailbox'):lower()
+
+    -- ── bcc-mailbox ───────────────────────────────────────────────────────────
+    if script == 'bcc-mailbox' then
+        local helper = BccBanksInternal and BccBanksInternal.getMailboxApi
+        local api
+        if helper then
+            api = helper()
+        else
+            local ok, res = pcall(function()
+                return exports['bcc-mailbox']:getMailboxAPI()
+            end)
+            if ok then api = res end
+        end
+        if not api then
+            devPrint('[Mail] bcc-mailbox API not available')
+            return
+        end
+        api:SendMailToCharacter(charId, subject, body, { fromName = fromName })
+
+    -- ── syn_mail ──────────────────────────────────────────────────────────────
+    elseif script == 'syn_mail' then
+        devPrint('[Mail] syn_mail: looking up address for charId=', charId)
+        local addrRow = MySQL.query.await(
+            'SELECT `address` FROM `mail` WHERE `charidentifier` = ? LIMIT 1',
+            { charId }
+        )
+        if not addrRow or not addrRow[1] then
+            devPrint('[Mail] syn_mail: no address found for charId=', charId)
+            return
+        end
+        local toAddress = tostring(addrRow[1].address)
+        local toField = '["' .. toAddress .. '"]'
+        devPrint('[Mail] syn_mail: inserting mail for address=', toAddress)
+        local dateStr = os.date('%Y-%m-%d %H:%M:%S')
+
+        local insertedId = nil
+        local ok, err = pcall(function()
+            local res = MySQL.query.await(
+                'INSERT INTO `mails` (`anon`, `read`, `from`, `to`, `subject`, `body`, `folder`, `fromName`, `toNames`, `date`, `hidesent`, `copyTo`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                { 0, 0, '0', toField, subject, body, 'Inbox', fromName, '[]', dateStr, 1, toAddress }
+            )
+            insertedId = res and res.insertId
+        end)
+        if not ok then
+            devPrint('[Mail] syn_mail: DB insert failed:', err)
+            return
+        end
+        devPrint('[Mail] syn_mail: DB insert success, insertId=', insertedId)
+
+        if insertedId then
+            local mailObj = {
+                id       = insertedId,
+                anon     = false,
+                read     = false,
+                ['from'] = '0',
+                ['to']   = toField,
+                subject  = subject,
+                body     = body,
+                folder   = 'Inbox',
+                fromName = fromName,
+                toNames  = '[]',
+                date     = dateStr,
+                hidesent = true,
+                copyTo   = toAddress,
+            }
+            for _, playerId in ipairs(GetPlayers()) do
+                local user = VORPcore.getUser(tonumber(playerId))
+                if user and user.getUsedCharacter then
+                    local ch = user.getUsedCharacter
+                    if tostring(ch.charIdentifier) == tostring(charId) then
+                        local pid = tonumber(playerId)
+                        TriggerClientEvent('syn_mail:rec_addedMailid', pid, mailObj, true)
+                        TriggerEvent('syn_mail:signcharacter', pid)
+                        devPrint('[Mail] syn_mail: pushed mail to online player src=', playerId)
+                        break
+                    end
+                end
+            end
+        end
+
+    -- ── custom server event ───────────────────────────────────────────────────
+    elseif script == 'custom' then
+        local event = tostring(mailCfg.CustomEvent or '')
+        if event == '' then
+            devPrint('[Mail] Config.Mail.Script is "custom" but Config.Mail.CustomEvent is not set')
+            return
+        end
+        TriggerEvent(event, charId, fromName, subject, body)
+
+    else
+        devPrint('[Mail] Unknown Config.Mail.Script value:', script)
     end
-    local ok, api = pcall(function()
-        return exports['bcc-mailbox']:getMailboxAPI()
-    end)
-    if ok then
-        return api
-    end
-    return nil
 end
+
+BccBanksInternal = BccBanksInternal or {}
+BccBanksInternal.sendMailToCharacter = sendMailToCharacter
 
 local function formatCurrency(amount)
     if BccBanksInternal and BccBanksInternal.formatCurrency then
@@ -63,30 +152,27 @@ local function sendLoanStatusMail(loan, status)
 
     local cfg = (Config and Config.LoanStatusMail) or {}
     if cfg.Enabled == false then return end
+    if not (Config.Mail and Config.Mail.Script) then
+        devPrint('[Mail] Config.Mail.Script not set — skipping loan mail')
+        return
+    end
     if status == 'approved' and cfg.SendOnApprove == false then return end
     if status == 'rejected' and cfg.SendOnReject == false then return end
 
-    local mailApi = getMailboxApi()
-    if not mailApi then return end
-
-    local bankName = getBankNameForLoan(loan)
+    local bankName  = getBankNameForLoan(loan)
     local bankLabel = bankName or cfg.MailFrom or _U('mail_sender_default') or 'Bank'
-    local fromName = bankName or cfg.MailFrom or _U('mail_sender_default') or 'Bank Postmaster'
+    local fromName  = cfg.MailFrom or bankName or _U('mail_sender_default') or 'Bank Postmaster'
     local amountText = formatCurrency(loan.amount)
 
     local subject
     if status == 'approved' then
-        if cfg.ApproveSubject then
-            subject = safeFormat(cfg.ApproveSubject, amountText, bankLabel, tostring(loan.id or ''))
-        else
-            subject = _U('mail_loan_approved_subject') or 'Loan Approved'
-        end
+        subject = cfg.ApproveSubject
+            and safeFormat(cfg.ApproveSubject, amountText, bankLabel, tostring(loan.id or ''))
+            or  (_U('mail_loan_approved_subject') or 'Loan Approved')
     else
-        if cfg.RejectSubject then
-            subject = safeFormat(cfg.RejectSubject, amountText, bankLabel, tostring(loan.id or ''))
-        else
-            subject = _U('mail_loan_rejected_subject') or 'Loan Rejected'
-        end
+        subject = cfg.RejectSubject
+            and safeFormat(cfg.RejectSubject, amountText, bankLabel, tostring(loan.id or ''))
+            or  (_U('mail_loan_rejected_subject') or 'Loan Rejected')
     end
 
     local body
@@ -94,25 +180,25 @@ local function sendLoanStatusMail(loan, status)
         if cfg.ApproveBody then
             body = safeFormat(cfg.ApproveBody, amountText, bankLabel, tostring(loan.id or ''))
         else
-            local intro = _U('mail_loan_approved_body_intro') or 'Your loan request has been approved.'
-            local outro = _U('mail_loan_approved_body_outro') or 'Visit the bank to access the funds.'
+            local intro      = _U('mail_loan_approved_body_intro') or 'Your loan request has been approved.'
+            local outro      = _U('mail_loan_approved_body_outro') or 'Visit the bank to access the funds.'
             local amountLine = (_U('mail_amount_label') or 'Amount: ') .. amountText
-            local bankLine = (_U('mail_bank_label') or 'Bank: ') .. bankLabel
+            local bankLine   = (_U('mail_bank_label')   or 'Bank: ')   .. bankLabel
             body = table.concat({ intro, amountLine, bankLine, outro }, '\n')
         end
     else
         if cfg.RejectBody then
             body = safeFormat(cfg.RejectBody, amountText, bankLabel, tostring(loan.id or ''))
         else
-            local intro = _U('mail_loan_rejected_body_intro') or 'Your loan request has been rejected.'
-            local outro = _U('mail_loan_rejected_body_outro') or 'Please contact the bank for details.'
+            local intro      = _U('mail_loan_rejected_body_intro') or 'Your loan request has been rejected.'
+            local outro      = _U('mail_loan_rejected_body_outro') or 'Please contact the bank for details.'
             local amountLine = (_U('mail_amount_label') or 'Amount: ') .. amountText
-            local bankLine = (_U('mail_bank_label') or 'Bank: ') .. bankLabel
+            local bankLine   = (_U('mail_bank_label')   or 'Bank: ')   .. bankLabel
             body = table.concat({ intro, amountLine, bankLine, outro }, '\n')
         end
     end
 
-    mailApi:SendMailToCharacter(loan.character_id, subject, body, { fromName = fromName })
+    sendMailToCharacter(loan.character_id, fromName, subject, body)
 end
 
 local function enrichLoanFinancials(rows)
