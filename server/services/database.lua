@@ -167,7 +167,7 @@ CreateThread(function()
             `bank_id` VARCHAR(36) NOT NULL,
             `owner_id` BIGINT UNSIGNED NOT NULL,
             `size` VARCHAR(255) NOT NULL,
-            `inventory_id` CHAR(36) NULL,
+            `inventory_id` CHAR(40) NULL,
             PRIMARY KEY (`id`),
             KEY `idx_sdb_bank` (`bank_id`),
             KEY `idx_sdb_owner` (`owner_id`),
@@ -189,6 +189,28 @@ CreateThread(function()
             CONSTRAINT `FK_sdba_sdb`
               FOREIGN KEY (`safety_deposit_box_id`)
               REFERENCES `bcc_safety_deposit_boxes` (`id`)
+              ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    ]])
+
+    -- bcc_checks
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `bcc_checks` (
+            `id` VARCHAR(36) NOT NULL,
+            `account_id` VARCHAR(36) NOT NULL,
+            `issuer_character_id` BIGINT UNSIGNED NOT NULL,
+            `recipient_character_id` BIGINT UNSIGNED NOT NULL,
+            `amount` DOUBLE(15,2) NOT NULL,
+            `memo` VARCHAR(255) NOT NULL DEFAULT '',
+            `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+            `cashed_at` DATETIME NULL,
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `idx_checks_account` (`account_id`),
+            KEY `idx_checks_recipient` (`recipient_character_id`),
+            KEY `idx_checks_issuer` (`issuer_character_id`),
+            CONSTRAINT `FK_checks_account`
+              FOREIGN KEY (`account_id`) REFERENCES `bcc_accounts` (`id`)
               ON DELETE CASCADE ON UPDATE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
     ]])
