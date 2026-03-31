@@ -64,15 +64,24 @@ function OpenGiveAccessPage(account, ParentPage)
         style = {}
     })
 
-    local charId = nil
-    local level  = nil
+    local firstName = ''
+    local lastName  = ''
+    local level     = nil
 
     GiveAccessPage:RegisterElement("input", {
-        label       = _U("character_id_label"),
-        placeholder = _U("character_id_placeholder"),
+        label       = _U("check_recipient_label"),
+        placeholder = _U("check_recipient_placeholder"),
         style       = {}
     }, function(data)
-        charId = tonumber(data.value)
+        firstName = data.value or ''
+    end)
+
+    GiveAccessPage:RegisterElement("input", {
+        label       = _U("check_recipient_last_label"),
+        placeholder = _U("check_recipient_last_placeholder"),
+        style       = {}
+    }, function(data)
+        lastName = data.value or ''
     end)
 
     GiveAccessPage:RegisterElement("input", {
@@ -98,7 +107,10 @@ function OpenGiveAccessPage(account, ParentPage)
         slot  = "footer",
         style = {}
     }, function()
-        if not charId or charId < 1 then
+        local fn = firstName:match('^%s*(.-)%s*$')
+        local ln = lastName:match('^%s*(.-)%s*$')
+
+        if fn == '' or ln == '' then
             Notify(_U("invalid_character_id"), 4000)
             return
         end
@@ -109,9 +121,10 @@ function OpenGiveAccessPage(account, ParentPage)
         end
 
         local ok, result = BccUtils.RPC:CallAsync("Feather:Banks:GiveAccountAccess", {
-            account   = account.id,
-            character = charId,
-            level     = level
+            account    = account.id,
+            first_name = fn,
+            last_name  = ln,
+            level      = level
         })
 
         if not ok then
