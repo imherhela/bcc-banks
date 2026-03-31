@@ -299,8 +299,9 @@ end
 
 function OpenSDBGiveAccessPage(sdb, ParentPage, SDBListPage)
     local SDBGiveAccessPage = FeatherBankMenu:RegisterPage('sdb:page:access:give:' .. tostring(sdb.id))
-    local charId = nil
-    local level  = nil
+    local firstName = ''
+    local lastName  = ''
+    local level     = nil
     SDBGiveAccessPage:RegisterElement('header', {
         value = _U("grant_sdb_access_header"),
         slot  = 'header'
@@ -310,11 +311,18 @@ function OpenSDBGiveAccessPage(sdb, ParentPage, SDBListPage)
         style = {}
     })
     SDBGiveAccessPage:RegisterElement('input', {
-        label       = _U("character_id_label"),
-        placeholder = _U("character_id_placeholder"),
+        label       = _U("check_recipient_label"),
+        placeholder = _U("check_recipient_placeholder"),
         style       = {}
     }, function(data)
-        charId = tonumber(data.value)
+        firstName = data.value or ''
+    end)
+    SDBGiveAccessPage:RegisterElement('input', {
+        label       = _U("check_recipient_last_label"),
+        placeholder = _U("check_recipient_last_placeholder"),
+        style       = {}
+    }, function(data)
+        lastName = data.value or ''
     end)
     SDBGiveAccessPage:RegisterElement('input', {
         label       = _U("access_level_label"),
@@ -327,14 +335,17 @@ function OpenSDBGiveAccessPage(sdb, ParentPage, SDBListPage)
         label = _U("grant_access_button"),
         style = {}
     }, function()
-        if not charId or not level then
+        local fn = firstName:match('^%s*(.-)%s*$')
+        local ln = lastName:match('^%s*(.-)%s*$')
+        if fn == '' or ln == '' or not level then
             Notify(_U("invalid_char_id_level"), 4000)
             return
         end
         local ok, res = BccUtils.RPC:CallAsync('Feather:Banks:AddSDBAccess', {
-            sdb_id   = NormalizeId(sdb.id),
-            user_src = charId,
-            level    = level
+            sdb_id     = NormalizeId(sdb.id),
+            first_name = fn,
+            last_name  = ln,
+            level      = level
         })
         if ok then OpenSDBAccessMenu(sdb, ParentPage, SDBListPage) end
     end)
