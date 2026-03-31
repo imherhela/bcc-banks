@@ -115,12 +115,26 @@ Config = {
 		MaxAccounts = 5 -- 0 = No Limit
 	},
 
+	-- Check / Cheque System
+	Checks = {
+		Enabled   = true,
+		MaxAmount = 0,     -- 0 = No Limit
+		UseItem   = false, -- true = physical inventory item, false = DB-only
+		ItemName  = 'bank_check',
+	},
+
+	-- Mail System
+	Mail = {
+		Script      = 'bcc-mailbox', -- 'bcc-mailbox', 'syn_mail', or 'custom'
+		CustomEvent = '',         -- only used when Script = 'custom'
+	},
+
 	-- Loan timing & reminders
 	LoanTiming = {
 		DaysUntilDefault = 10, -- Number of in-game days (weathersync cycles) before a loan defaults
 		DailyReminders = {
 			Enabled = true,            -- Send daily reminders while a balance remains
-			SendMailbox = true,        -- Deliver a mail via bcc-mailbox
+			SendMailbox = true,        -- Deliver a mail via mail system
 			NotifyOnline = true,       -- Pop an on-screen notification for borrowers that are online
 			MailFrom = 'Bank Postmaster', -- Display name for system mail
 			MailSubject = 'Loan Payment Reminder', -- string.format with (elapsedDays, dueDays, loanId, outstanding)
