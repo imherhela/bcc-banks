@@ -370,26 +370,29 @@ BccUtils.RPC:Register('Feather:Banks:AddSDBAccess', function(params, cb, src)
         end
         requesterId = ch.charIdentifier
     end
-    local sdbId         = NormalizeId(params and params.sdb_id)
-    -- Expect a VORP character identifier (charidentifier). Keep compatibility with older param name 'user_src'
-    local otherCharId   = tonumber(params and params.character) or tonumber(params and params.user_src)
-    if not otherCharId then
-        devPrint("AddSDBAccess: invalid target character id")
-        NotifyClient(src, _U('error_invalid_data_provided'), 'error', 4000)
-        cb(false)
-        return
-    end
-    local level         = tonumber(params and params.level)
+    local sdbId     = NormalizeId(params and params.sdb_id)
+    local firstName = tostring((params and params.first_name) or ''):match('^%s*(.-)%s*$')
+    local lastName  = tostring((params and params.last_name)  or ''):match('^%s*(.-)%s*$')
+    local level     = tonumber(params and params.level)
 
-    devPrint("Parsed inputs → sdbId:", sdbId, "otherCharId:", otherCharId, "level:", level, "requesterId:", requesterId)
+    devPrint("AddSDBAccess: sdbId:", sdbId, "name:", firstName, lastName, "level:", level, "requesterId:", requesterId)
 
-    -- Validation
-    if not requesterId or not sdbId or not otherCharId or not level then
+    if not requesterId or not sdbId or firstName == '' or lastName == '' or not level then
         devPrint("AddSDBAccess: Invalid input data.")
         NotifyClient(src, _U('error_invalid_data_provided'), "error", 4000)
         cb(false)
         return
     end
+
+    -- Resolve name to character ID
+    local otherCharId = GetCharacterByName(firstName, lastName)
+    if not otherCharId then
+        devPrint("AddSDBAccess: character not found for name:", firstName, lastName)
+        NotifyClient(src, _U('error_target_character_not_found'), 'error', 4000)
+        cb(false)
+        return
+    end
+    otherCharId = tonumber(otherCharId)
 
     -- Permission check
     if not (IsSDBAdmin(sdbId, requesterId) or IsSDBOwner(sdbId, requesterId)) then
@@ -403,15 +406,6 @@ BccUtils.RPC:Register('Feather:Banks:AddSDBAccess', function(params, cb, src)
     if requesterId == otherCharId then
         devPrint("AddSDBAccess: Attempted to give access to self.")
         NotifyClient(src, _U('warn_you_already_have_access_box'), "warning", 4000)
-        cb(false)
-        return
-    end
-
-    -- Check if target character exists in DB
-    local exists = MySQL.query.await("SELECT 1 FROM characters WHERE charidentifier = ? LIMIT 1", { otherCharId })
-    if not exists or not exists[1] then
-        devPrint("AddSDBAccess: Target character not found in DB →", otherCharId)
-        NotifyClient(src, _U('error_target_character_not_found'), "error", 4000)
         cb(false)
         return
     end
