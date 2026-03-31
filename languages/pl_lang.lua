@@ -1,6 +1,6 @@
 Locales["pl_lang"] = {
     bank_label = "Bank",
-    -- Closed prompt wording
+    -- Closed prompt wording (match stables/guarma style)
     hours = " jest otwarty od ~o~",
     to = ":00~q~ do ~o~",
     hundred = ":00",
@@ -47,6 +47,7 @@ Locales["pl_lang"] = {
     loan_created_notify = "Pożyczka została utworzona, a środki przelane.",
     confirm_loan_header = "Potwierdź pożyczkę",
     confirm_loan_text = "Zaciągnąć pożyczkę w wysokości $%s na %s%% na okres %s miesięcy? Łącznie do spłaty: $%s",
+    interest_rate_display = "Zastosowane oprocentowanie: %s%%",
     loans_list_header = "Pożyczki",
     no_loans_found = "Nie znaleziono pożyczek dla tego konta.",
     loan_label = "Pożyczka",
@@ -96,7 +97,6 @@ Locales["pl_lang"] = {
     cancel_removal_button = "Nie, wróć",
     access_removed_log = "Odebrano dostęp dla postaci o ID:",
     failed_remove_access_log = "Nie udało się odebrać dostępu dla postaci o ID:",
-    
     -- OpenSDBListPage
     sdb_list_header = "Skrytki depozytowe",
     sdb_list_subheader = "Twoje skrytki w tym banku",
@@ -142,6 +142,7 @@ Locales["pl_lang"] = {
     -- OpenSDBRemoveAccessPage
     remove_sdb_access_header = "Odbierz dostęp do skrytki",
     no_users_access_box = "Brak użytkowników z dostępem do tej skrytki.",
+
     confirm_remove_access_header = "Potwierdź odebranie dostępu",
     confirm_remove_access_text = "Odebrać dostęp dla %s?",
     confirm_remove_button = "Tak, odbierz",
@@ -305,6 +306,41 @@ Locales["pl_lang"] = {
     admin_invalid_hours_toggle = "Błąd przełączania godzin.",
     admin_hours_range_error = "Godziny muszą być w zakresie 0-23.",
 
+    -- Checks UI
+    checks_button = "Zrealizuj czek",
+    write_check_button = "Wystaw czek",
+    view_issued_checks_button = "Wystawione czeki",
+    write_check_header = "Wystaw czek",
+    write_check_subheader = "Środki są natychmiast odliczane z konta",
+    check_recipient_label = "Imię odbiorcy",
+    check_recipient_placeholder = "Wprowadź imię",
+    check_recipient_last_label = "Nazwisko odbiorcy",
+    check_recipient_last_placeholder = "Wprowadź nazwisko",
+    check_amount_label = "Kwota czeku",
+    check_amount_placeholder = "Wprowadź kwotę",
+    check_memo_label = "Notatka (opcjonalnie)",
+    check_memo_placeholder = "np. Za świadczone usługi",
+    check_confirm_header = "Potwierdź czek",
+    check_confirm_text = "Wystawić czek na $%s dla %s %s?",
+    check_written_notify = "Czek na $%s został wystawiony.",
+    cash_check_header = "Zrealizuj czek",
+    cash_check_subheader = "Oczekujące czeki wystawione na ciebie",
+    no_checks_found = "Nie znaleziono oczekujących czeków.",
+    check_label = "$%s (od %s %s)",
+    check_cash_confirm_header = "Potwierdź realizację czeku",
+    check_cash_confirm_text = "Zrealizować czek na $%s?",
+    check_cashed_notify = "Czek na $%s został zrealizowany.",
+    issued_checks_header = "Wystawione czeki",
+    issued_checks_subheader = "Czeki wystawione z tego konta",
+    no_issued_checks_found = "Brak oczekujących czeków wystawionych z tego konta.",
+    issued_check_label = "$%s — dla %s %s",
+    void_check_button = "Unieważnij czek",
+    check_void_confirm_header = "Potwierdź unieważnienie",
+    check_void_confirm_text = "Unieważnić czek na $%s? Środki wrócą na konto.",
+    check_voided_notify = "Czek unieważniony. Środki zwrócono na konto.",
+    invalid_check_amount = "Wprowadź poprawną kwotę czeku.",
+    invalid_check_recipient = "Wprowadź poprawne imię i nazwisko odbiorcy.",
+
     -- Server messages (accounts)
     error_character_not_found = "Postać nie została znaleziona.",
     error_invalid_bank = "Wybrano nieprawidłowy bank.",
@@ -334,8 +370,10 @@ Locales["pl_lang"] = {
     error_no_deposit_permission = "Nie masz uprawnień do wpłacania tutaj.",
     error_invalid_deposit_amount = "Nieprawidłowa kwota wpłaty.",
     error_not_enough_cash = "Nie masz wystarczającej ilości gotówki. Posiadasz $%s",
+    error_not_enough_gold_have = "Nie masz wystarczającej ilości złota. Posiadasz %s.",
     error_unable_deposit_gold = "Obecnie nie można wpłacić złota.",
     success_deposit_gold = "Pomyślnie wpłacono %s g złota.",
+    success_deposit_cash = "Pomyślnie wpłacono $%s",
     error_no_withdraw_permission = "Nie masz uprawnień do wypłacania z tego konta.",
     error_invalid_withdraw_amount = "Nieprawidłowa kwota wypłaty.",
     error_insufficient_account_funds = "Niewystarczające środki na koncie.",
@@ -360,6 +398,8 @@ Locales["pl_lang"] = {
     error_unable_repay_loan = "Nie udało się spłacić pożyczki.",
     success_loan_repaid = "Spłata pożyczki zakończona sukcesem.",
     error_loan_already_paid = "Pożyczka została już w pełni spłacona.",
+    error_loan_already_disbursed = "Środki pożyczki zostały już wypłacone.",
+    error_invalid_loan_claim = "Nie można przelać środków na to konto.",
 
     -- Server messages (gold exchange)
     error_invalid_gold_or_cash_amount = "Wprowadź poprawną ilość złota lub kwotę gotówki.",
@@ -381,6 +421,7 @@ Locales["pl_lang"] = {
 
     view_loans_button = "Zobacz pożyczki",
     loan_account_auto_note = "Dla tej pożyczki zostanie automatycznie utworzone dedykowane konto.",
+    loan_account_default_name = "Konto pożyczkowe",
     loan_claim_button = "Przelej środki na konto",
     loan_claim_select_account = "Wybierz konto, na które mają wpłynąć środki",
     loan_claim_success = "Środki zostały przelane na konto.",
@@ -436,4 +477,14 @@ Locales["pl_lang"] = {
     error_unable_open_sdb = "Nie można obecnie otworzyć skrytki.",
     error_loan_not_approved = "Pożyczka nie została jeszcze zatwierdzona.",
     success_loan_disbursed = "Środki z pożyczki przelano na konto.",
+
+    -- Server messages (checks)
+    error_invalid_check = "Nieprawidłowy czek.",
+    error_check_not_yours = "Ten czek nie jest wystawiony na ciebie.",
+    error_check_already_cashed = "Ten czek został już zrealizowany.",
+    error_check_voided = "Ten czek został unieważniony.",
+    error_unable_write_check = "Nie można teraz wystawić czeku.",
+    error_insufficient_funds_check = "Niewystarczające środki na koncie do wystawienia czeku.",
+    error_check_not_at_bank = "Musisz być w banku, aby zrealizować czek.",
+    error_check_no_permission_void = "Nie masz uprawnień do unieważnienia tego czeku.",
 }
