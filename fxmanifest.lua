@@ -3,7 +3,7 @@ rdr3_warning 'I acknowledge that this is a prerelease build of RedM, and I am aw
 
 game 'rdr3'
 lua54 'yes'
-version '1.4.1'
+version '1.5.0'
 author 'BCC Scripts'
 
 client_scripts {
