@@ -54,8 +54,9 @@ FeatherBankMenu = FeatherMenu:RegisterMenu('feather:bank:menu', {
         --DisplayRadar(false)
     end,
     closed = function()
-        --DisplayRadar(true)
-    end
+    --DisplayRadar(true)
+    TriggerServerEvent('Feather:Banks:MenuClosed')
+end
 })
 
 RegisterNetEvent('Feather:Banks:Start', function()
