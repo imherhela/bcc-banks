@@ -282,6 +282,10 @@ function IsAccountLocked(account, src)
     return LockedAccounts[account] ~= nil
 end
 
+function GetAccountLockHolder(account)
+    return LockedAccounts[account]
+end
+
 -- Freeze/unfreeze all accounts belonging to an owner character
 function SetOwnerAccountsFrozen(ownerId, frozen)
     if not ownerId then return end
