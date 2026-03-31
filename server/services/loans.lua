@@ -1,14 +1,9 @@
-local MailboxAPI
-
+-- Mail is handled by sendMailToCharacter in admin.lua via BccBanksInternal
 local function getMailboxApi()
-    if MailboxAPI then return MailboxAPI end
     local ok, api = pcall(function()
         return exports['bcc-mailbox']:getMailboxAPI()
     end)
-    if ok and api then
-        MailboxAPI = api
-    end
-    return MailboxAPI
+    return ok and api or nil
 end
 
 local function formatCurrency(amount)
@@ -81,9 +76,8 @@ local function sendDailyReminder(loanRow, info, elapsedDays, dueDays)
     local formattedBody = safeFormat(bodyFmt, elapsedDays, totalDays, loanRow.id, formatCurrency(outstanding))
 
     if reminders.SendMailbox then
-        local mailApi = getMailboxApi()
-        if mailApi then
-            mailApi:SendMailToCharacter(loanRow.character_id, formattedSubject, formattedBody, { fromName = fromName })
+        if BccBanksInternal and BccBanksInternal.sendMailToCharacter then
+            BccBanksInternal.sendMailToCharacter(loanRow.character_id, fromName, formattedSubject, formattedBody)
         end
     end
 
@@ -331,8 +325,7 @@ CreateThread(function()
 
                     local outstanding = tonumber(info.outstanding or 0) or 0
                     if due and due > 0 and newElapsed >= due and outstanding > 0 then
-                        local mailApi = getMailboxApi()
-                        if mailApi then
+                        if BccBanksInternal and BccBanksInternal.sendMailToCharacter then
                             local _, reminders = getReminderConfig()
                             local fromName = reminders.MailFrom or 'Bank Postmaster'
                             local subject = 'Loan Default Notice'
@@ -340,7 +333,7 @@ CreateThread(function()
                                 ln.id,
                                 formatCurrency(outstanding)
                             )
-                            mailApi:SendMailToCharacter(ln.character_id, subject, body, { fromName = fromName })
+                            BccBanksInternal.sendMailToCharacter(ln.character_id, fromName, subject, body)
                         end
                         -- Mark defaulted and freeze all accounts for owner
                         MySQL.query.await('UPDATE `bcc_loans` SET `is_defaulted` = 1, `status` = "defaulted" WHERE `id` = ?', { ln.id })
