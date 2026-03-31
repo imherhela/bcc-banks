@@ -100,9 +100,11 @@ function OpenUI(bank)
         return
     end
 
-    if BccUtils.RPC:CallAsync('Feather:Banks:GetBankerBusy', { bank = bankId }) then
-        Notify(_U("banker_busy_notify"), 4000)
-        return
+    if Config.UseBankerBusy then
+        if BccUtils.RPC:CallAsync('Feather:Banks:GetBankerBusy', { bank = bankId }) then
+            Notify(_U("banker_busy_notify"), 4000)
+            return
+        end
     end
     local MainPage = FeatherBankMenu:RegisterPage('bank:page:hub:' .. tostring(bankId))
     MainPage:RegisterElement('header', {
@@ -141,6 +143,14 @@ function OpenUI(bank)
     }, function()
         OpenLoansBankPage(bank, MainPage)
     end)
+    if Config.Checks and Config.Checks.Enabled and not Config.Checks.UseItem then
+        MainPage:RegisterElement('button', {
+            label = _U("checks_button"),
+            style = {}
+        }, function()
+            OpenCashCheckPage(bank, MainPage)
+        end)
+    end
     MainPage:RegisterElement('line', {
         slot = "footer",
         style = {}
@@ -157,7 +167,9 @@ function OpenUI(bank)
         style = {}
     })
     FeatherBankMenu:Open({ startupPage = MainPage })
-    BccUtils.RPC:Notify('Feather:Banks:SetBankerBusy', { bank = bankId })
+    if Config.UseBankerBusy then
+        BccUtils.RPC:CallAsync('Feather:Banks:SetBankerBusy', { bank = bankId, state = true })
+    end
 end
 
 function OpenTransactionsPage(acc, ParentPage)
