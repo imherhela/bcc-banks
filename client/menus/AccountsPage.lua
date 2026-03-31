@@ -92,6 +92,22 @@ function OpenAccountDetails(account, AccountPage)
         OpenAccessMenu(account, AccountPage)
     end)
 
+    if Config.Checks and Config.Checks.Enabled then
+        AccountPageDetails:RegisterElement("button", {
+            label = _U("write_check_button"),
+            style = {}
+        }, function()
+            OpenWriteCheckPage(acc, AccountPageDetails)
+        end)
+
+        AccountPageDetails:RegisterElement("button", {
+            label = _U("view_issued_checks_button"),
+            style = {}
+        }, function()
+            OpenIssuedChecksPage(acc, AccountPageDetails)
+        end)
+    end
+
     AccountPageDetails:RegisterElement("line", {
         slot  = "footer",
         style = {}
